@@ -20,15 +20,25 @@ When you have finished the lab, there are more questions on the same data in `la
 In the directory `data/simpsons` there are four CSV files taken (and lightly sanitised) from [Kaggle](https://www.kaggle.com/datasets/prashant111/the-simpsons-dataset/data).
 Note that some columns have been dropped from `simpsons_script_lines` to make the exercise more interesting.
 
-- [ ] Load all four of the files
+- [x] Load all four of the files
 
 ::: {.solution}
-
+```{r}
+characters <- read.csv("data/simpsons/simpsons_characters.csv")
+episodes <- read.csv("data/simpsons/simpsons_episodes.csv")
+locations <- read.csv("data/simpsons/simpsons_locations.csv")
+script_lines <- read.csv("data/simpsons/simpsons_script_lines.csv")
+```
 :::
 
-- [ ] Before joining anything, look at the first few rows of each table. What does one row of each table represent? Which columns link the tables together, and would you describe each link as one-to-one, one-to-many or many-to-many?
-
+- [x] Before joining anything, look at the first few rows of each table. What does one row of each table represent? Which columns link the tables together, and would you describe each link as one-to-one, one-to-many or many-to-many?
 ::: {.solution}
+```{r}
+head(episodes)
+head(characters)
+head(locations)
+head(script_lines)
+```
 
 :::
 
@@ -36,11 +46,22 @@ Note that some columns have been dropped from `simpsons_script_lines` to make th
 Answer the following research questions using `join` functions.
 (Make sure your outputs print e.g. location or character names, not just IDs).
 
-- [ ] Which character and location pairs have the most lines?
+- [Homer Simpson in Simpson Home] Which character and location pairs have the most lines?
 - [ ] Which episodes feature the most characters? (Hint: look at the `n_distinct` function. Is every script line spoken by a character?)
 
 ::: {.solution}
+```{r}
+library(tidyverse)
+library(janitor)
 
+script_lines |>
+  inner_join(characters, by=c("character_id"="id")) |>
+  inner_join(locations, by=c("location_id"="id")) |>
+  group_by(character_name, location_name) |>
+  summarise(n_lines=n()) |>
+  arrange(desc(n_lines))
+
+```
 :::
 
 ### Task 1b: Choosing a Join
@@ -54,20 +75,48 @@ In this task we look at what that throws away.
 - [ ] In Task 1, we used `inner_join` to find which character and location pairs have the most lines. Was that the right choice?
 
 ::: {.solution}
+```{r}
+script_lines |>
+  inner_join(locations, by=c("location_id"="id"))
+script_lines |>
+  left_join(locations, by=c("location_id"="id"))
 
+
+#inner_join keeps 157,848 rows, left_join keeps 158,255 rows because it keeps episodes or locations with no lines?
+```
 :::
 
 ### Task 2: String Processing
 
 Answer the following research questions:
 
-- [ ] Which episode has the longest line (in terms of `spoken_words`)?
-- [ ] Print that line in full (e.g. with `cat`). Does it look like a single line of dialogue? Find the same line in the raw CSV file: what do you think has gone wrong?
-- [ ] How many values of `spoken_words` have this problem? Remove them, and find the longest line again. (Hint: each row of a CSV file ends with a *newline* character, which `R` writes as `"\n"`. You can search for it with `str_detect` like any other text.)
+- [episode_id:503, number:142 ] Which episode has the longest line (in terms of `spoken_words`)?
+- [contains speech marks ending in wrong place] Print that line in full (e.g. with `cat`). Does it look like a single line of dialogue? Find the same line in the raw CSV file: what do you think has gone wrong?
+- [22 episodes] How many values of `spoken_words` have this problem? Remove them, and find the longest line again. (Hint: each row of a CSV file ends with a *newline* character, which `R` writes as `"\n"`. You can search for it with `str_detect` like any other text.)
 - [ ] In how many episodes are donuts / doughnuts mentioned? (Hint: be careful about capitalisation.)
 
 ::: {.solution}
+```{r}
+script_lines |>
+  arrange(desc(str_length(spoken_words))) |>
+  slice(1) |>
+  pull(spoken_words) |>
+  paste()
 
+script_lines |>
+  filter(str_detect(spoken_words, "\n"))
+
+script_lines |>
+  filter(!str_detect(spoken_words, "\n")) |>
+  arrange(desc(str_length(spoken_words))) |>
+  slice(1) |>
+  pull(spoken_words) |>
+  paste()
+
+
+
+
+```
 :::
 
 ### Task 3a: Parsing Dates
